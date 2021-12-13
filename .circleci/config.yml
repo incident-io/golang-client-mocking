@@ -1,0 +1,138 @@
+---
+version: 2.1
+
+executors:
+  golang:
+    docker:
+      - image: cimg/go:1.17
+
+orbs:
+  go: circleci/go@1.7.0
+
+commands:
+  go-install-deps:
+    description: Save the go mod & build cache, and install Go tools
+    steps:
+      - go-cache-restore
+      - go/mod-download
+
+  go-install-tools:
+    description: Install a specific Golang dev tool
+    parameters:
+      tool:
+        type: string
+        default: '"'  # matches everything by default
+      args:
+        type: string
+        default: ''
+    steps:
+      - run: |
+          cd ~/project
+          cat tools.go \
+            | grep "<< parameters.tool >>" \
+            | grep _ \
+            | awk -F'"' '{print $2}' \
+            | xargs -tI % go install << parameters.args >> %
+
+  go-cache-restore:
+    description: Restore the go mod & build cache.
+    steps:
+      - restore_cache:
+          keys:
+            - v6-gosrc-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+            - v6-gosrc-{{ .Branch }}-{{ checksum "go.sum" }}-
+            - v6-gosrc-{{ .Branch }}-
+            - v6-gosrc-master-
+          name: Restoring Source Cache
+      - restore_cache:
+          keys:
+            - v6-gobin-{{ arch }}-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+            - v6-gobin-{{ arch }}-{{ .Branch }}-{{ checksum "go.sum" }}-
+            - v6-gobin-{{ arch }}-{{ .Branch }}-
+            - v6-gobin-{{ arch }}-master-
+          name: Restoring Build Cache
+
+  go-cache-save:
+    description: Save the go mod & build cache.
+    steps:
+      - save_cache:
+          key: v6-gosrc-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+          name: Saving Source Cache
+          paths:
+            - /home/circleci/go/pkg/mod
+      - save_cache:
+          key: v6-gobin-{{ arch }}-{{ .Branch }}-{{ checksum "go.sum" }}-{{ .Environment.CIRCLE_JOB }}
+          name: Saving Build Cache
+          paths:
+            - /home/circleci/.cache/go-build
+
+jobs:
+  lint:
+    working_directory: ~/project
+    executor:
+      name: golang
+    steps:
+      - checkout:
+          path: ~/project
+      - run: sudo apt-get update && sudo apt install jq
+      - go-install-deps
+      - go-install-tools:
+          tool: mockgen
+      - go-install-tools:
+          tool: interfacer
+      - run: go mod verify
+      - run: go mod tidy
+      - run:
+          name: Check Modules
+          command: |
+            if [ ! -z "$(git status --porcelain)" ]; then
+            git status
+            echo
+            echo -e '\033[1;93m!!! "go mod verify && go mod tidy" resulted in changes. Please run those commands locally and commit the changes.\e[0m'
+            echo
+            exit 1
+            fi
+      - run: go fmt ./...
+      - run:
+          name: Check Generated Code
+          command: |
+            if [ ! -z "$(git status --porcelain)" ]; then
+            git status
+            echo
+            echo -e '\033[1;93m!!! "go fmt ./..." resulted in changes. Please run it locally and commit the changes.\e[0m'
+            echo
+            exit 1
+            fi
+      - run: go generate ./...
+      - run:
+          name: Check Generated Code
+          command: |
+            if [ ! -z "$(git status --porcelain)" ]; then
+            git status
+            echo
+            echo -e '\033[1;93m!!! "go generate ./..." resulted in changes. Please codegen locally and commit the changes.\e[0m'
+            echo
+            exit 1
+            fi
+
+  test:
+    working_directory: ~/project
+    executor:
+      name: golang
+    steps:
+      - checkout:
+          path: ~/project
+      - go-install-deps
+      - go-install-tools:
+          tool: ginkgo
+      - run:
+          name: ginkgo
+          command: ginkgo -r .
+      - go-cache-save
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - lint
+      - test
