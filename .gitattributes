@@ -1,0 +1,2 @@
+# Collapse mock_slackclient by default in PRs
+slackclient/mock_slackclient linguist-generated
