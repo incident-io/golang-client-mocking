@@ -2,7 +2,7 @@
 
 This code is paired with a blog post:
 
-> [Mocking external client libraries using context.Context](https://incident.io/block/mocking-clients)
+> [Mocking external client libraries using context.Context](https://incident.io/blog/golang-mocking-clients)
 
 The post describes a method for mocking external client libraries which can be
 applied to most codebases.
