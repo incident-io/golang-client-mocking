@@ -1,4 +1,4 @@
-module github.com/lawrencejones/scratch/golang-client-mocking
+module github.com/incident-io/golang-client-mocking
 
 go 1.17
 

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/golang/mock/gomock"
-	"github.com/lawrencejones/scratch/golang-client-mocking/slackclient"
-	mock_slackclient "github.com/lawrencejones/scratch/golang-client-mocking/slackclient/mock_slackclient"
+	"github.com/incident-io/golang-client-mocking/slackclient"
+	mock_slackclient "github.com/incident-io/golang-client-mocking/slackclient/mock_slackclient"
 	"github.com/slack-go/slack"
 
 	. "github.com/onsi/ginkgo"

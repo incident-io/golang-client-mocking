@@ -14,5 +14,5 @@ var (
 
 func TestSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "github.com/lawrencejones/scratch/slackclient")
+	RunSpecs(t, "github.com/incident-io/golang-client-mocking/slackclient")
 }
