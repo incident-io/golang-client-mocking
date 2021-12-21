@@ -59,3 +59,34 @@ var _ = Describe("incident-io/codebase", func() {
   })
 })
 ```
+
+## Notes on Go codegen
+
+This was originally in the blog post, but removed to keep it focused.
+
+For those who are fresh to Go, it's worth explaining that as a language with a
+deliberate lack of meta-programming features, code generation is the de-facto
+way to approach several development problems.
+
+This might feel unfamiliar or even awkward coming from other languages, and it
+certainly makes traversing diffs a bit harder.
+
+When working with generated code, I'd give a few pieces of advice:
+
+- Add generated codepaths to your `.gitattributes` file as `linguist-generated`.
+  While support is a bit flaky, this will cause GitHub to (mostly) hide
+  generated code when looking at PRs, helping you to focus on the code real
+  humans have written instead of computer generated noise.
+
+- Keep clear boundaries between human and computer generated code. In my example
+  we've generated the client interface into `client_interface.go`, which will
+  contain only computer generated code, but even that may be a bad idea- you'll
+  have the fewest issues if you keep generated code in a separate package, as
+  we've done with `mock_slackclient`.
+
+- Add CI steps to check generated code remains up-to-date, both to avoid human
+  changes ending up alongside codegen, but also to catch any accidents where `go
+  generate` was forgotten when checking in the code.
+
+This repo demonstrates all of these, including the CI steps to keep generated
+code inline with the source.
