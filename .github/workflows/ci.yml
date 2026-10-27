@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.17"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install tools
+        run: |
+          for tool in mockgen interfacer; do
+            grep "$tool" tools.go | grep _ | awk -F'"' '{print $2}' | xargs -tI % go install %
+          done
+
+      - run: go mod download
+      - run: go mod verify
+      - run: go mod tidy
+
+      - name: Check modules
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status
+            echo '::error::"go mod verify && go mod tidy" resulted in changes. Run those commands locally and commit the changes.'
+            exit 1
+          fi
+
+      - run: go fmt ./...
+
+      - name: Check formatting
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status
+            echo '::error::"go fmt ./..." resulted in changes. Run it locally and commit the changes.'
+            exit 1
+          fi
+
+      - run: go generate ./...
+
+      - name: Check generated code
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status
+            echo '::error::"go generate ./..." resulted in changes. Run codegen locally and commit the changes.'
+            exit 1
+          fi
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install ginkgo
+        run: |
+          grep ginkgo tools.go | grep _ | awk -F'"' '{print $2}' | xargs -tI % go install %
+
+      - run: go mod download
+      - run: ginkgo -r .
